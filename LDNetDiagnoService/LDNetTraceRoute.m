@@ -109,6 +109,7 @@
         //每一步连续发送maxAttenpts报文
         icmp = false;
         NSMutableString *traceTTLLog = [[NSMutableString alloc] initWithCapacity:20];
+        LDTraceModel *traceInfo = [LDTraceModel new];
         [traceTTLLog appendFormat:@"%d\t", ttl];
         for (int try = 0; try < maxAttempts; try ++) {
             startTime = [LDNetTimer getMicroSeconds];
@@ -149,8 +150,10 @@
                     NSString *hostAddress = [NSString stringWithFormat:@"%s", display];
                     if (try == 0) {
                         [traceTTLLog appendFormat:@"%@\t\t", hostAddress];
+                        traceInfo.ip = hostAddress;
                     }
                     [traceTTLLog appendFormat:@"%0.2fms\t", (float)delta / 1000];
+                    [traceInfo.routeTimes addObject:@((float)delta / 1000)];
                 }
             } else {
                 timeoutTTL++;
@@ -171,7 +174,11 @@
 
         //输出报文,如果三次都无法监控接收到报文，跳转结束
         if (icmp) {
-            [self.delegate appendRouteLog:traceTTLLog];
+            if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]) {
+                [self.delegate appendRouteLog:traceTTLLog];
+            }else if ([self.delegate respondsToSelector:@selector(appendRouteLogInfo:)]){
+                [self.delegate appendRouteLogInfo:traceInfo];
+            }
         } else {
             //如果连续三次接收不到icmp回显报文
             if (timeoutTTL >= 4) {
