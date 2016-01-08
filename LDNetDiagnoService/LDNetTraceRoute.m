@@ -44,7 +44,9 @@
     struct hostent *host_entry = gethostbyname(host.UTF8String);
     if (host_entry == NULL) {
         if (_delegate != nil) {
-            [_delegate appendRouteLog:@"TraceRoute>>> Could not get host address"];
+            if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]){
+                [_delegate appendRouteLog:@"TraceRoute>>> Could not get host address"];
+            }
             [_delegate traceRouteDidEnd];
         }
         return false;
@@ -63,7 +65,9 @@
     //创建一个支持ICMP协议的UDP网络套接口（用于接收）
     if ((recv_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)) < 0) {
         if (_delegate != nil) {
-            [_delegate appendRouteLog:@"TraceRoute>>> Could not create recv socket"];
+            if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]){
+                [_delegate appendRouteLog:@"TraceRoute>>> Could not create recv socket"];
+            }
             [_delegate traceRouteDidEnd];
         }
         return false;
@@ -72,7 +76,9 @@
     //创建一个UDP套接口（用于发送）
     if ((send_sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         if (_delegate != nil) {
-            [_delegate appendRouteLog:@"TraceRoute>>> Could not create xmit socket"];
+            if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]){
+                [_delegate appendRouteLog:@"TraceRoute>>> Could not create xmit socket"];
+            }
             [_delegate traceRouteDidEnd];
         }
         return false;
@@ -93,23 +99,26 @@
     bool icmp = false;  // Positionné à true lorsqu'on reçoit la trame ICMP en retour.
     long startTime;     // Timestamp lors de l'émission du GET HTTP
     long delta;         // Durée de l'aller-retour jusqu'au hop.
+    
+    NSMutableArray *traceArray = [NSMutableArray new];
 
     // On progresse jusqu'à un nombre de TTLs max.
     while (ttl <= maxTTL) {
         memset(&fromAddr, 0, sizeof(fromAddr));
+        LDTraceModel *traceInfo = [LDTraceModel new];
         //设置sender 套接字的ttl
         if (setsockopt(send_sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)) < 0) {
             error = true;
-            if (_delegate != nil) {
+            if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]){
                 [_delegate appendRouteLog:@"TraceRoute>>> setsockopt failled"];
             }
+            [traceArray addObject:traceInfo];
         }
 
 
         //每一步连续发送maxAttenpts报文
         icmp = false;
         NSMutableString *traceTTLLog = [[NSMutableString alloc] initWithCapacity:20];
-        LDTraceModel *traceInfo = [LDTraceModel new];
         [traceTTLLog appendFormat:@"%d\t", ttl];
         for (int try = 0; try < maxAttempts; try ++) {
             startTime = [LDNetTimer getMicroSeconds];
@@ -152,6 +161,9 @@
                         [traceTTLLog appendFormat:@"%@\t\t", hostAddress];
                         traceInfo.ip = hostAddress;
                     }
+                    if (traceInfo.ip.length<=0) {
+                        traceInfo.ip = hostAddress;
+                    }
                     [traceTTLLog appendFormat:@"%0.2fms\t", (float)delta / 1000];
                     [traceInfo.routeTimes addObject:@((float)delta / 1000)];
                 }
@@ -176,15 +188,17 @@
         if (icmp) {
             if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]) {
                 [self.delegate appendRouteLog:traceTTLLog];
-            }else if ([self.delegate respondsToSelector:@selector(appendRouteLogInfo:)]){
-                [self.delegate appendRouteLogInfo:traceInfo];
             }
+            [traceArray addObject:traceInfo];
         } else {
             //如果连续三次接收不到icmp回显报文
             if (timeoutTTL >= 4) {
                 break;
             } else {
-                [self.delegate appendRouteLog:[NSString stringWithFormat:@"%d\t********\t", ttl]];
+                if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]){
+                    [self.delegate appendRouteLog:[NSString stringWithFormat:@"%d\t********\t", ttl]];
+                }
+                [traceArray addObject:traceInfo];
             }
         }
         ttl++;
@@ -192,7 +206,12 @@
 
     isrunning = false;
     // On averti le delegate que le traceroute est terminé.
-    [_delegate traceRouteDidEnd];
+    if ([_delegate respondsToSelector:@selector(traceRouteDidEnd)]) {
+        [_delegate traceRouteDidEnd];
+    }
+    if ([_delegate respondsToSelector:@selector(traceRouteDidEndWithInfos:)]) {
+        [_delegate traceRouteDidEndWithInfos:traceArray];
+    }
     return error;
 }
 

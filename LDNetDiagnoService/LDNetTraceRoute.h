@@ -19,11 +19,10 @@ static const int TRACEROUTE_TIMEOUT = 5000000;
  *
  */
 @protocol LDNetTraceRouteDelegate <NSObject>
-@required
-- (void)traceRouteDidEnd;
 @optional
+- (void)traceRouteDidEnd;
+- (void)traceRouteDidEndWithInfos:(NSArray *)infos;
 - (void)appendRouteLog:(NSString *)routeLog;
-- (void)appendRouteLogInfo:(LDTraceModel *)routeInfo;
 @end
 
 
