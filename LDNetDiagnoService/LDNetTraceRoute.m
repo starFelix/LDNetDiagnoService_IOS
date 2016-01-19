@@ -47,7 +47,12 @@
             if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]){
                 [_delegate appendRouteLog:@"TraceRoute>>> Could not get host address"];
             }
-            [_delegate traceRouteDidEnd];
+            if ([self.delegate respondsToSelector:@selector(traceRouteDidEnd)]) {
+                [_delegate traceRouteDidEnd];
+            }
+            if ([self.delegate respondsToSelector:@selector(traceRouteDidEndWithInfos:)]) {
+                [_delegate traceRouteDidEndWithInfos:@[]];
+            }
         }
         return false;
     }
@@ -68,7 +73,12 @@
             if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]){
                 [_delegate appendRouteLog:@"TraceRoute>>> Could not create recv socket"];
             }
-            [_delegate traceRouteDidEnd];
+            if ([self.delegate respondsToSelector:@selector(traceRouteDidEnd)]) {
+                [_delegate traceRouteDidEnd];
+            }
+            if ([self.delegate respondsToSelector:@selector(traceRouteDidEndWithInfos:)]) {
+                [_delegate traceRouteDidEndWithInfos:@[]];
+            }
         }
         return false;
     }
@@ -79,7 +89,12 @@
             if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]){
                 [_delegate appendRouteLog:@"TraceRoute>>> Could not create xmit socket"];
             }
-            [_delegate traceRouteDidEnd];
+            if ([self.delegate respondsToSelector:@selector(traceRouteDidEnd)]) {
+                [_delegate traceRouteDidEnd];
+            }
+            if ([self.delegate respondsToSelector:@selector(traceRouteDidEndWithInfos:)]) {
+                [_delegate traceRouteDidEndWithInfos:@[]];
+            }
         }
         return false;
     }
