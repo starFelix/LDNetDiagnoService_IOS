@@ -13,6 +13,8 @@
 #import "LDNetTraceRoute.h"
 #import "LDNetTimer.h"
 
+static BOOL _terminated=NO;
+
 @implementation LDNetTraceRoute
 
 /**
@@ -29,17 +31,32 @@
         udpPort = port;
         readTimeout = timeout;
         maxAttempts = attempts;
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onChangeStatus:) name:UIApplicationWillResignActiveNotification object:nil];
     }
 
     return self;
 }
 
+- (void)onChangeStatus:(id)sender{
+    [self stopTrace];
+}
+
+- (void)dealloc{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
 
 /**
  * 监控tranceroute 路径
  */
 - (Boolean)doTraceRoute:(NSString *)host
 {
+    if ([NSThread isMainThread]) {
+        _terminated = NO;
+    }else{
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            _terminated = NO;
+        });
+    }
     //从name server获取server主机的地址
     struct hostent *host_entry = gethostbyname(host.UTF8String);
     if (host_entry == NULL) {
@@ -119,6 +136,10 @@
 
     // On progresse jusqu'à un nombre de TTLs max.
     while (ttl <= maxTTL) {
+        if (_terminated) {
+            [traceArray removeAllObjects];
+            break;
+        }
         memset(&fromAddr, 0, sizeof(fromAddr));
         LDTraceModel *traceInfo = [LDTraceModel new];
         //设置sender 套接字的ttl
@@ -136,6 +157,10 @@
         NSMutableString *traceTTLLog = [[NSMutableString alloc] initWithCapacity:20];
         [traceTTLLog appendFormat:@"%d\t", ttl];
         for (int try = 0; try < maxAttempts; try ++) {
+            if (_terminated) {
+                [traceArray removeAllObjects];
+                break;
+            }
             startTime = [LDNetTimer getMicroSeconds];
             //发送成功返回值等于发送消息的长度
             if (sendto(send_sock, cmsg, sizeof(cmsg), 0, (struct sockaddr *)&destination,
@@ -238,9 +263,13 @@
     @synchronized(running)
     {
         isrunning = false;
+        _terminated = YES;
     }
 }
 
++ (void)stopAllTrace{
+    _terminated = YES;
+}
 
 /**
  * 检测traceroute是否在运行
