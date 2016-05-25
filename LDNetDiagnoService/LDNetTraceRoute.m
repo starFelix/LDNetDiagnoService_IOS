@@ -14,6 +14,8 @@
 #import "LDNetTimer.h"
 #import "LDNetGetAddress.h"
 
+static BOOL _terminated=NO;
+
 @implementation LDNetTraceRoute
 
 /**
@@ -30,9 +32,18 @@
         udpPort = port;
         readTimeout = timeout;
         maxAttempts = attempts;
+        [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onChangeStatus:) name:UIApplicationWillResignActiveNotification object:nil];
     }
 
     return self;
+}
+
+- (void)onChangeStatus:(id)sender{
+    [self stopTrace];
+}
+
+- (void)dealloc{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 
@@ -41,12 +52,28 @@
  */
 - (Boolean)doTraceRoute:(NSString *)host
 {
+    if ([NSThread isMainThread]) {
+        _terminated = NO;
+    }else{
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            _terminated = NO;
+        });
+    }
+
     //从name server获取server主机的地址
     NSArray *serverDNSs = [LDNetGetAddress getDNSsWithDormain:host];
     if (!serverDNSs || serverDNSs.count <= 0) {
         if (_delegate != nil) {
-            [_delegate appendRouteLog:@"TraceRoute>>> Could not get host address"];
-            [_delegate traceRouteDidEnd];
+            if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]){
+                [_delegate appendRouteLog:@"TraceRoute>>> Could not get host address"];
+            }
+            if ([self.delegate respondsToSelector:@selector(traceRouteDidEnd)]) {
+                [_delegate traceRouteDidEnd];
+            }
+            if ([self.delegate respondsToSelector:@selector(traceRouteDidEndWithInfos:)]) {
+                [_delegate traceRouteDidEndWithInfos:@[]];
+            }
+
         }
         return false;
     }
@@ -89,8 +116,16 @@
     
     if ((recv_sock = socket(destination->sa_family, SOCK_DGRAM, isIPV6?IPPROTO_ICMPV6:IPPROTO_ICMP)) < 0) {
         if (_delegate != nil) {
-            [_delegate appendRouteLog:@"TraceRoute>>> Could not create recv socket"];
-            [_delegate traceRouteDidEnd];
+            if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]){
+                [_delegate appendRouteLog:@"TraceRoute>>> Could not create recv socket"];
+            }
+            if ([self.delegate respondsToSelector:@selector(traceRouteDidEnd)]) {
+                [_delegate traceRouteDidEnd];
+            }
+            if ([self.delegate respondsToSelector:@selector(traceRouteDidEndWithInfos:)]) {
+                [_delegate traceRouteDidEndWithInfos:@[]];
+            }
+
         }
         return false;
     }
@@ -98,8 +133,16 @@
     //创建一个UDP套接口（用于发送）
     if ((send_sock = socket(destination->sa_family, SOCK_DGRAM, 0)) < 0) {
         if (_delegate != nil) {
-            [_delegate appendRouteLog:@"TraceRoute>>> Could not create xmit socket"];
-            [_delegate traceRouteDidEnd];
+            if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]){
+                [_delegate appendRouteLog:@"TraceRoute>>> Could not create xmit socket"];
+            }
+            if ([self.delegate respondsToSelector:@selector(traceRouteDidEnd)]) {
+                [_delegate traceRouteDidEnd];
+            }
+            if ([self.delegate respondsToSelector:@selector(traceRouteDidEndWithInfos:)]) {
+                [_delegate traceRouteDidEndWithInfos:@[]];
+            }
+
         }
         return false;
     }
@@ -114,16 +157,24 @@
     bool icmp = false;  // Positionné à true lorsqu'on reçoit la trame ICMP en retour.
     long startTime;     // Timestamp lors de l'émission du GET HTTP
     long delta;         // Durée de l'aller-retour jusqu'au hop.
+    
+    NSMutableArray *traceArray = [NSMutableArray new];
 
     // On progresse jusqu'à un nombre de TTLs max.
     while (ttl <= maxTTL) {
+        if (_terminated) {
+            [traceArray removeAllObjects];
+            break;
+        }
         memset(&fromAddr, 0, sizeof(fromAddr));
+        LDTraceModel *traceInfo = [LDTraceModel new];
         //设置sender 套接字的ttl
         if ((isIPV6? setsockopt(send_sock,IPPROTO_IPV6, IPV6_UNICAST_HOPS, &ttl, sizeof(ttl)):setsockopt(send_sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl))) < 0) {
             error = true;
-            if (_delegate != nil) {
+            if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]){
                 [_delegate appendRouteLog:@"TraceRoute>>> setsockopt failled"];
             }
+            [traceArray addObject:traceInfo];
         }
 
 
@@ -133,6 +184,10 @@
         [traceTTLLog appendFormat:@"%d\t", ttl];
         NSString *hostAddress = @"***";
         for (int try = 0; try < maxAttempts; try ++) {
+            if (_terminated) {
+                [traceArray removeAllObjects];
+                break;
+            }
             startTime = [LDNetTimer getMicroSeconds];
             //发送成功返回值等于发送消息的长度
             ssize_t sentLen = sendto(send_sock, cmsg, sizeof(cmsg), 0, (struct sockaddr *)destination, isIPV6?sizeof(struct sockaddr_in6):sizeof(struct sockaddr_in));
@@ -181,8 +236,13 @@
                     
                     if (try == 0) {
                         [traceTTLLog appendFormat:@"%@\t\t", hostAddress];
+                        traceInfo.ip = hostAddress;
+                    }
+                    if (traceInfo.ip.length<=0) {
+                        traceInfo.ip = hostAddress;
                     }
                     [traceTTLLog appendFormat:@"%0.2fms\t", (float)delta / 1000];
+                    [traceInfo.routeTimes addObject:@((float)delta / 1000)];
                 }
             } else {
                 timeoutTTL++;
@@ -203,13 +263,19 @@
 
         //输出报文,如果三次都无法监控接收到报文，跳转结束
         if (icmp) {
-            [self.delegate appendRouteLog:traceTTLLog];
+            if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]) {
+                [self.delegate appendRouteLog:traceTTLLog];
+            }
+            [traceArray addObject:traceInfo];
         } else {
             //如果连续三次接收不到icmp回显报文
             if (timeoutTTL >= 4) {
                 break;
             } else {
-                [self.delegate appendRouteLog:[NSString stringWithFormat:@"%d\t********\t", ttl]];
+                if ([self.delegate respondsToSelector:@selector(appendRouteLog:)]){
+                    [self.delegate appendRouteLog:[NSString stringWithFormat:@"%d\t********\t", ttl]];
+                }
+                [traceArray addObject:traceInfo];
             }
         }
         
@@ -221,7 +287,12 @@
 
     isrunning = false;
     // On averti le delegate que le traceroute est terminé.
-    [_delegate traceRouteDidEnd];
+    if ([_delegate respondsToSelector:@selector(traceRouteDidEnd)]) {
+        [_delegate traceRouteDidEnd];
+    }
+    if ([_delegate respondsToSelector:@selector(traceRouteDidEndWithInfos:)]) {
+        [_delegate traceRouteDidEndWithInfos:traceArray];
+    }
     return error;
 }
 
@@ -233,7 +304,12 @@
     @synchronized(running)
     {
         isrunning = false;
+        _terminated = YES;
     }
+}
+
++ (void)stopAllTrace{
+    _terminated = YES;
 }
 
 

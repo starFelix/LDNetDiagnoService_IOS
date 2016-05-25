@@ -31,6 +31,7 @@
 		629AF6F51A0125E5001CBB3E /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 629AF6F31A0125E5001CBB3E /* LaunchScreen.xib */; };
 		629AF7011A0125E5001CBB3E /* LDNetDiagnoServiceDemoTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 629AF7001A0125E5001CBB3E /* LDNetDiagnoServiceDemoTests.m */; };
 		629AF71B1A012644001CBB3E /* CoreTelephony.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 629AF71A1A012644001CBB3E /* CoreTelephony.framework */; };
+		88828B2C1CF5C1B9009D0B77 /* LDTraceModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 88828B2B1CF5C1B9009D0B77 /* LDTraceModel.m */; };
 		B0535F411CF2E9F100A1E7D6 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 629AF6E91A0125E5001CBB3E /* AppDelegate.m */; };
 		B0535F421CF2E9F100A1E7D6 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 629AF6EC1A0125E5001CBB3E /* ViewController.m */; };
 		B0535F431CF2E9F100A1E7D6 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 629AF6E61A0125E5001CBB3E /* main.m */; };
@@ -117,6 +118,8 @@
 		629AF7131A012630001CBB3E /* LDSimplePing.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDSimplePing.h; sourceTree = "<group>"; };
 		629AF7141A012630001CBB3E /* LDSimplePing.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDSimplePing.m; sourceTree = "<group>"; };
 		629AF71A1A012644001CBB3E /* CoreTelephony.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreTelephony.framework; path = System/Library/Frameworks/CoreTelephony.framework; sourceTree = SDKROOT; };
+		88828B2A1CF5C1B9009D0B77 /* LDTraceModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LDTraceModel.h; sourceTree = "<group>"; };
+		88828B2B1CF5C1B9009D0B77 /* LDTraceModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LDTraceModel.m; sourceTree = "<group>"; };
 		B0535F8C1CF2F07800A1E7D6 /* libLDNetDiagnoService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = libLDNetDiagnoService.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -243,6 +246,8 @@
 		629AF70A1A012630001CBB3E /* LDNetDiagnoService */ = {
 			isa = PBXGroup;
 			children = (
+				88828B2A1CF5C1B9009D0B77 /* LDTraceModel.h */,
+				88828B2B1CF5C1B9009D0B77 /* LDTraceModel.m */,
 				629AF70B1A012630001CBB3E /* LDNetDiagnoService.h */,
 				629AF70C1A012630001CBB3E /* LDNetDiagnoService.m */,
 				629AF70D1A012630001CBB3E /* LDNetPing.h */,
@@ -469,6 +474,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B0535F411CF2E9F100A1E7D6 /* AppDelegate.m in Sources */,
+				88828B2C1CF5C1B9009D0B77 /* LDTraceModel.m in Sources */,
 				B0535F421CF2E9F100A1E7D6 /* ViewController.m in Sources */,
 				B0535F431CF2E9F100A1E7D6 /* main.m in Sources */,
 			);

@@ -7,6 +7,7 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "LDTraceModel.h"
 
 static const int TRACEROUTE_PORT = 30001;
 static const int TRACEROUTE_MAX_TTL = 30;
@@ -18,8 +19,10 @@ static const int TRACEROUTE_TIMEOUT = 5000000;
  *
  */
 @protocol LDNetTraceRouteDelegate <NSObject>
-- (void)appendRouteLog:(NSString *)routeLog;
+@optional
 - (void)traceRouteDidEnd;
+- (void)traceRouteDidEndWithInfos:(NSArray *)infos;
+- (void)appendRouteLog:(NSString *)routeLog;
 @end
 
 
