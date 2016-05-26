@@ -61,4 +61,6 @@ static const int TRACEROUTE_TIMEOUT = 5000000;
 - (void)stopTrace;
 - (bool)isRunning;
 
++ (void)stopAllTrace;
+
 @end
