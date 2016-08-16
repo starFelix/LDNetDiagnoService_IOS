@@ -52,6 +52,8 @@ static BOOL _terminated=NO;
  */
 - (Boolean)doTraceRoute:(NSString *)host
 {
+    Boolean error = false;
+    @try {
     if ([NSThread isMainThread]) {
         _terminated = NO;
     }else{
@@ -109,7 +111,6 @@ static BOOL _terminated=NO;
     struct sockaddr fromAddr;
     int recv_sock;
     int send_sock;
-    Boolean error = false;
 
     isrunning = true;
     //创建一个支持ICMP协议的UDP网络套接口（用于接收）
@@ -293,7 +294,14 @@ static BOOL _terminated=NO;
     if ([_delegate respondsToSelector:@selector(traceRouteDidEndWithInfos:)]) {
         [_delegate traceRouteDidEndWithInfos:traceArray];
     }
-    return error;
+        
+    } @catch (NSException *exception) {
+        if ([_delegate respondsToSelector:@selector(traceRouteDidEndWithInfos:)]) {
+            [_delegate traceRouteDidEndWithInfos:nil];
+        }
+    } @finally {
+        return error;
+    }
 }
 
 /**
